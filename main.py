@@ -21,66 +21,83 @@ def run_pd_query(query):
     return pd.read_sql(query, conn)
 
 # SQL query to obtain all of the weather information
-WEATHER_QUERY = 'SELECT * FROM weather;'
-weather_df = run_pd_query(WEATHER_QUERY)
+@st.cache
+def select_weather():
+    WEATHER_QUERY = 'SELECT * FROM weather;'
+    weather_df = run_pd_query(WEATHER_QUERY)
+    return weather_df
+
+weather_df = select_weather()
 
 # SQL query to create a row for each trip and the start and end station
-TRIP_STATION_QUERY = 'SELECT trip.id AS trip_id, \
-                            trip.bike_id AS bike_id, \
-                            trip.subscription_type AS subscription_type, \
-                            trip.duration AS duration, \
-                            trip.start_date AS start_date, \
-                            trip.end_date AS end_date, \
-                            start_station.name AS start_station_name, \
-                            end_station.name AS end_station_name, \
-                            start_station.lat AS start_lat, \
-                            start_station.long AS start_long, \
-                            end_station.lat AS end_lat, \
-                            end_station.long AS end_long \
-                        FROM trip \
-                        JOIN station AS start_station \
-                            ON trip.start_station_id = start_station.id \
-                        JOIN station AS end_station \
-                            ON trip.end_station_id = end_station.id;'
+@st.cache
+def select_trips():
+    TRIP_STATION_QUERY = 'SELECT trip.id AS trip_id, \
+                                trip.bike_id AS bike_id, \
+                                trip.subscription_type AS subscription_type, \
+                                trip.duration AS duration, \
+                                trip.start_date AS start_date, \
+                                trip.end_date AS end_date, \
+                                start_station.name AS start_station_name, \
+                                end_station.name AS end_station_name, \
+                                start_station.lat AS start_lat, \
+                                start_station.long AS start_long, \
+                                end_station.lat AS end_lat, \
+                                end_station.long AS end_long \
+                            FROM trip \
+                            JOIN station AS start_station \
+                                ON trip.start_station_id = start_station.id \
+                            JOIN station AS end_station \
+                                ON trip.end_station_id = end_station.id;'
 
-sf_df = run_pd_query(TRIP_STATION_QUERY)
+    sf_df = run_pd_query(TRIP_STATION_QUERY)
+    return sf_df
 
-# remove any rows that have empty columns
-sf_df = sf_df.dropna(how="any")
-weather_df = weather_df.dropna(how="any")
+sf_df = select_trips()
 
-# remove the outliers based on duration
-z_scores = stats.zscore(sf_df["duration"])
+# preprocess the data
+@st.cache
+def preprocess(sf_df, weather_df):
+    # remove any rows that have empty columns
+    sf_df = sf_df.dropna(how="any")
+    weather_df = weather_df.dropna(how="any")
 
-abs_z_scores = np.abs(z_scores)
-filtered_entries = (abs_z_scores < 3)
-sf_df = sf_df[filtered_entries]
+    # remove the outliers based on duration
+    z_scores = stats.zscore(sf_df["duration"])
 
-# convert the start and end dates to pandas datetime
-sf_df["start_date"] = pd.to_datetime(sf_df["start_date"], format='%m/%d/%Y %H:%M')
-sf_df["end_date"] = pd.to_datetime(sf_df["end_date"], format='%m/%d/%Y %H:%M')
+    abs_z_scores = np.abs(z_scores)
+    filtered_entries = (abs_z_scores < 3)
+    sf_df = sf_df[filtered_entries]
 
-weather_df["date"] = pd.to_datetime(weather_df["date"], format='%m/%d/%Y')
+    # convert the start and end dates to pandas datetime
+    sf_df["start_date"] = pd.to_datetime(sf_df["start_date"], format='%m/%d/%Y %H:%M')
+    sf_df["end_date"] = pd.to_datetime(sf_df["end_date"], format='%m/%d/%Y %H:%M')
 
-# add month column
-sf_df["start_month"] = sf_df["start_date"].dt.month
-sf_df["end_month"] = sf_df["end_date"].dt.month
-weather_df["month"] = weather_df["date"].dt.month
+    weather_df["date"] = pd.to_datetime(weather_df["date"], format='%m/%d/%Y')
 
-# add year column
-sf_df["start_year"] = sf_df["start_date"].dt.year
-sf_df["end_year"] = sf_df["end_date"].dt.year
+    # add month column
+    sf_df["start_month"] = sf_df["start_date"].dt.month
+    sf_df["end_month"] = sf_df["end_date"].dt.month
+    weather_df["month"] = weather_df["date"].dt.month
 
-# add day column
-sf_df["start_day"] = sf_df["start_date"].dt.day_name()
-sf_df["end_day"] = sf_df["end_date"].dt.day_name()
+    # add year column
+    sf_df["start_year"] = sf_df["start_date"].dt.year
+    sf_df["end_year"] = sf_df["end_date"].dt.year
 
-# add hour column
-sf_df["start_hour"] = sf_df["start_date"].dt.hour
-sf_df["end_hour"] = sf_df["end_date"].dt.hour
+    # add day column
+    sf_df["start_day"] = sf_df["start_date"].dt.day_name()
+    sf_df["end_day"] = sf_df["end_date"].dt.day_name()
 
-# make duration into minutes
-sf_df["duration_min"] = sf_df["duration"] / 60
+    # add hour column
+    sf_df["start_hour"] = sf_df["start_date"].dt.hour
+    sf_df["end_hour"] = sf_df["end_date"].dt.hour
+
+    # make duration into minutes
+    sf_df["duration_min"] = sf_df["duration"] / 60
+
+    return sf_df, weather_df
+
+sf_df, weather_df = preprocess(sf_df, weather_df)
 
 # BEGIN APP
 
