@@ -6,6 +6,8 @@ from scipy import stats
 from pandas_profiling import ProfileReport
 import geopandas as gpd
 from datetime import datetime
+import altair as alt
+import pydeck as pdk
 
 # setup streamlit
 import streamlit as st
@@ -13,8 +15,13 @@ import streamlit as st
 # setup database
 import sqlite3
 
+st.set_page_config(layout="wide")
+
 # global variables
 DATABASE_PATH = './data/sf/database.sqlite'
+MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+MAX_ALLOWED = 100000
 
 @st.cache(allow_output_mutation=True)
 def get_connection():
@@ -83,9 +90,9 @@ def preprocess(sf_df, weather_df):
     weather_df["date"] = pd.to_datetime(weather_df["date"], format='%m/%d/%Y')
 
     # add month column
-    sf_df["start_month"] = sf_df["start_date"].dt.month
-    sf_df["end_month"] = sf_df["end_date"].dt.month
-    weather_df["month"] = weather_df["date"].dt.month
+    sf_df["start_month"] = sf_df["start_date"].dt.month_name()
+    sf_df["end_month"] = sf_df["end_date"].dt.month_name()
+    weather_df["month"] = weather_df["date"].dt.month_name()
 
     # add year column
     sf_df["start_year"] = sf_df["start_date"].dt.year
@@ -107,52 +114,121 @@ def preprocess(sf_df, weather_df):
 sf_df, weather_df = preprocess(sf_df, weather_df)
 
 # BEGIN APP
-
+st.title("An Urban Study on Bike Share Demand across the San Francisco Bay Area")
 st.markdown('''
-# Bay Area Bike Share (Aug 2013 - Aug 2015)
-### Sachin Dabas | Samarth Gowda | Kevin Chian
-### Carnegie Mellon University - Interactive Data Science (05839)
-### An Urban Study on Bike Share Demand across the San Francisco Bay Area
+Bay Area Bike Share (Aug 2013 - Aug 2015)
+
+Sachin Dabas | Samarth Gowda | Kevin Chian
+
+Carnegie Mellon University - Interactive Data Science (05839)
 
 This dataset is from the San Francisco Bay Area Bike Share database from August 2013 to August 2015. The bike share is meant to provide people in the Bay Area an easy way to travel around. The dataset is provided as a SQL database and a series of csv files. 
 
 The database and files are available on Kaggle at the following [link](https://www.kaggle.com/benhamner/sf-bay-area-bike-share).
 
-The tables/csv that are available for us to use are `station`, `status`, `trip`, and `weather`. We are interested in combining the trip, station, and weather to create a dataset for each trip. 
 ''')
 
 st.markdown('''
 ADD INFORMATION ABOUT THE STORY WE ARE TRYING TO TELL AND WHAT WE ARE INVESTIGATING
 ''')
 
-st.write(sf_df.head(10))
+st.dataframe(sf_df.head(10))
+
+st.header("Understanding demand at bike stations")
+st.write("Change the different settings to explore how demand at bike stations changes depending on the time of the day, month in the year, day of the week, whether or not you are a subscriber and more. You are also able to select between looking at demand at stations where trips start in comparison to where trips are ending.")
 
 # end location for rides
-def joinplot_location(start_stations=True):
-    st.title("Joint plot of where the bike trips are ending")
+def filters():
+    filter_row_1, filter_row_2 = st.columns((1, 1))
+
+    with filter_row_1:
+        selected_hour_least, selected_hour_greatest = st.slider("Select a hour range", 0, 23, (6, 10))
+
+        trip_type = st.radio("Would you like to look at starting stations or ending stations?", ("start", "end"))
+
+        st.write("Select the subscription type to display")
+        subscriber = st.checkbox("Subscriber", True)
+        customer = st.checkbox("Customer", True)
     
-    # parameter selector
-    start_date = st.date_input('Start date', datetime(2013, 8, 8))
-    end_date = st.date_input('End date', datetime(2015, 8, 8))
+        if trip_type == "start":
+            lat_name, long_name = "start_lat", "start_long"
+        else:
+            lat_name, long_name = "end_lat", "end_long"
 
-    start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
-    if start_stations:
-        lat, long = "start_lat", "start_long"
-    else:
-        lat, long = "end_lat", "end_long"
+        subscription_type = []
+        if subscriber:
+            subscription_type.append("Subscriber")
+        if customer:
+            subscription_type.append("Customer")
 
-    mask = (sf_df["start_date"] >= start_date) & (sf_df["end_date"] <= end_date)
-    df = sf_df.loc[mask]
+    with filter_row_2:
+        selected_months = st.multiselect("Select the months to view", MONTHS, ["May", "June", "July", "August"])
 
-    fig = sns.jointplot(data=df, x=long, y=lat)
+        selected_days_of_week = st.multiselect("Select the days of the week to view", DAYS_OF_WEEK, ["Monday", "Tuesday", "Wednesday"])
 
-    st.caption(f"Displaying {df.shape[0]} trips for {start_date} through {end_date}")
-    st.pyplot(fig)
+    with st.spinner("Loading ..."):
+        mask = (
+                (sf_df["subscription_type"].isin(subscription_type)) \
+                & (sf_df[f"{trip_type}_day"].isin(selected_days_of_week)) \
+                & (sf_df[f"{trip_type}_month"].isin(selected_months)) \
+                & (sf_df[f"{trip_type}_hour"] >= selected_hour_least) \
+                & (sf_df[f"{trip_type}_hour"] <= selected_hour_greatest)
+            )
 
+        data = sf_df.loc[mask]
+
+        data = data[[lat_name, long_name]]
+        data = data.rename(columns={lat_name: "lat", long_name: "lon"})
+
+        if data.shape[0] > MAX_ALLOWED:
+            data = data.sample(MAX_ALLOWED)
+
+        return data
+
+# Skeleton for this function was taken from streamlit demo (https://github.com/streamlit/demo-uber-nyc-pickups/blob/master/streamlit_app.py)
+def display_trips_map(data, lat, lon, zoom):
+    st.write(pdk.Deck(
+        map_style="mapbox://styles/mapbox/light-v9",
+        initial_view_state={
+            "latitude": lat,
+            "longitude": lon,
+            "zoom": zoom,
+            "pitch": 50,
+        },
+        layers=[
+            pdk.Layer(
+                "HexagonLayer",
+                data=data,
+                get_position=["lon", "lat"],
+                radius=100,
+                elevation_scale=4,
+                elevation_range=[0, 1000],
+                pickable=True,
+                extruded=True,
+            ),
+        ]
+    ))
 
 def main():
-    joinplot_location(start_stations=True)
-    # map_rides()
+    data = filters()
+    
+    sf_coor = [37.7949, -122.4]
+    palo_alto_coor = [37.4419, -122.1430]
+    san_jose_coor = [37.3382, -121.8863]
+
+    map_row_1, map_row_2, map_row_3 = st.columns((2, 1, 1))
+
+    with map_row_1:
+        st.write("** San Francisco **")
+        display_trips_map(data, sf_coor[0], sf_coor[1], 12)
+    
+    with map_row_2:
+        st.write("** Palo Alto **")
+        display_trips_map(data, palo_alto_coor[0], palo_alto_coor[1], 11)
+    
+    with map_row_3:
+        st.write("** San Jose **")
+        display_trips_map(data, san_jose_coor[0], san_jose_coor[1], 12)
 
 if __name__ == "__main__":
     main()
