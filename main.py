@@ -15,7 +15,11 @@ import streamlit as st
 # setup database
 import sqlite3
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+        page_title="An Urban Study on Bike Share Demand across the San Francisco Bay Area",
+        page_icon="🚲",
+        layout="wide"
+    )
 
 # global variables
 DATABASE_PATH = './data/sf/database.sqlite'
@@ -220,7 +224,6 @@ def display_avg_daily_trip_count(data, trip_type, nunique_dates):
 
 
 def main():
-
     st.title("An Urban Study on Bike Share Demand across the San Francisco Bay Area")
     st.markdown('''
     Bay Area Bike Share (Aug 2013 - Aug 2015)
