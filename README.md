@@ -1,17 +1,17 @@
-# Helsinki & San Francisco Bike Share Comparision - An Urban Study
+# An Urban Study on Bike Share Demand across the San Francisco Bay Area
 
-Our exploratory data analysis has been completed in two notebooks, `helsinki.ipynb` and `sanfrancisco.ipynb`.
+Bay Area Bike Share (Aug 2013 - Aug 2015)
 
-### Data sources used thus far include:
+Sachin Dabas | Samarth Gowda | Kevin Chian
 
-- https://www.opendata.fi/data/en_GB/dataset/vaestotietoruudukko/resource/5f684348-6eea-451c-8849-1a7a76d9414c
-- https://www.avoindata.fi/data/en_GB/dataset/helsingin-liikennevaylat/resource/a678f192-871d-486d-b45b-32a3a343f85a
-- https://www.kaggle.com/benhamner/san-francisco-trip-map/data?scriptVersionId=0
-- https://www.kaggle.com/benhamner/sf-bay-area-bike-share
-- https://www.kaggle.com/geometrein/helsinki-city-bikes
+Carnegie Mellon University - Interactive Data Science (05839)
 
-_A small sample of the joined and cleaned dataset for trips/stations has been added in the `data/sf` folder on GitHub since the entire database for SF is too large for GitHub to handle. Please see the Kaggle link for the complete database files that we are using._
+This dataset is from the San Francisco Bay Area Bike Share database from August 2013 to August 2015. The bike share is meant to provide people in the Bay Area an easy way to travel around. The dataset is provided as a SQL database and a series of csv files.
 
-### Goals and research questions/areas
+The dataset is part of San Francisco's open data project, and bike share data from 2013 to the present is available. We focus on the beginning of the program to note program adoption.
 
-The goal of the project is to analyze the hidden layers of data among the daily travel of cyclists in the city of Helsinki and San Francisco. In order to do so, the various relationships are identified and necessary EDA has been performed to understand how cyclists travel in the both the cities. We are looking to compare how individuals from both cities are interacting with the bike sharing system. We are also interested in figuring out insights that are of interest to the bike share managers, such as which stations have a large or small amount of bikes at a given date, time, and weather. Essentially, one of the goals of the project will be to use machine learning models to help allocate the correct amount of bikes for each station. In order to do this we are interested in looking at a few key relationships such as the location, hour, month, weather, commuters/casual users, weekends/weekdays, distance, and more. The hundreds of station locations in Helsinki and San Francisco are able to tell us which features of the urban space most people are excited about and how they are using it currently. It is also important to understand what time of the day these centers are most active. Some of our initial visualizations are able to show these insights and we are planning to create more in our final submission.
+In 2013, the San Francisco Municipal Transportation Agency (SFMTA) partnered with various agencies across the entire Bay Area. Bikeshares were designed to provide an equitable and sustainable form of public transit, available in subscription and per-ride payment. The aim was to allow people to make short trips by bike to avoid the notorious Bay Area traffic, and to provide options for commuters and tourists alike.
+
+Stations were placed thorughout the bay, but mostly around other public transport options for convenience. In the periods after this dataset, various improvements were made to the program, including the addition of stationless bikes.
+
+The database and files are available on Kaggle at the following [link](https://www.kaggle.com/benhamner/sf-bay-area-bike-share).
