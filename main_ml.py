@@ -1,23 +1,10 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
-from pandas_profiling import ProfileReport
-import geopandas as gpd
-from datetime import datetime
-import altair as alt
-import pydeck as pdk
 import pickle
 import datetime
 
 import plotly.express as px
 
-# setup streamlit
 import streamlit as st
-
-# setup database
-import sqlite3
 
 st.set_page_config(layout="wide")
 
@@ -31,7 +18,6 @@ TRUTH_PATH = "stored_vars/y_te.pkl"
 
 
 def load_df(path, sort=True):
-    
     with open(path, "rb") as f:
         df = pickle.load(f)
         df_agg = df.groupby(["month", "day"]).agg(date=("date", "min"), usage=("usage", "mean"))
@@ -48,8 +34,6 @@ with open(PRED_PATH, "rb") as f:
     yhat = pickle.load(f)
 usage_df, usage_agg = load_df(USAGE_PATH)
 
-    
-    
 stations = pd.read_csv("data/sf/station.csv")
 stations_map = {name: id for name, id in zip(stations["name"], stations["id"])}
 
