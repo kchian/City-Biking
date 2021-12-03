@@ -22,104 +22,128 @@ st.set_page_config(
     )
 
 # global variables
-DATABASE_PATH = './data/sf/database.sqlite'
+# DATABASE_PATH = './data/sf/database.sqlite'
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 MAX_ALLOWED = 100000
 N_ROWS = 10
 
-@st.cache(allow_output_mutation=True)
-def get_connection():
-    conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
-    return conn
+# @st.cache(allow_output_mutation=True)
+# def get_connection():
+#     conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
+#     return conn
 
-conn = get_connection()
+# conn = get_connection()
 
-# function to run sql queries on
-def run_pd_query(query):
-    return pd.read_sql(query, conn)
+# # function to run sql queries on
+# def run_pd_query(query):
+#     return pd.read_sql(query, conn)
 
-# SQL query to obtain all of the weather information
-@st.cache(hash_funcs={sqlite3.Connection: lambda _: None})
-def select_weather():
-    WEATHER_QUERY = 'SELECT * FROM weather;'
-    weather_df = run_pd_query(WEATHER_QUERY)
-    return weather_df
+# # SQL query to obtain all of the weather information
+# @st.cache(hash_funcs={sqlite3.Connection: lambda _: None})
+# def select_weather():
+#     WEATHER_QUERY = 'SELECT * FROM weather;'
+#     weather_df = run_pd_query(WEATHER_QUERY)
+#     return weather_df
 
-weather_df = select_weather()
+# weather_df = select_weather()
 
-# SQL query to create a row for each trip and the start and end station
-@st.cache(hash_funcs={sqlite3.Connection: lambda _: None})
-def select_trips():
-    TRIP_STATION_QUERY = 'SELECT trip.id AS trip_id, \
-                                trip.bike_id AS bike_id, \
-                                trip.subscription_type AS subscription_type, \
-                                trip.duration AS duration, \
-                                trip.start_date AS start_date, \
-                                trip.end_date AS end_date, \
-                                start_station.name AS start_station_name, \
-                                end_station.name AS end_station_name, \
-                                start_station.lat AS start_lat, \
-                                start_station.long AS start_long, \
-                                end_station.lat AS end_lat, \
-                                end_station.long AS end_long \
-                            FROM trip \
-                            JOIN station AS start_station \
-                                ON trip.start_station_id = start_station.id \
-                            JOIN station AS end_station \
-                                ON trip.end_station_id = end_station.id;'
+# # SQL query to create a row for each trip and the start and end station
+# @st.cache(hash_funcs={sqlite3.Connection: lambda _: None})
+# def select_trips():
+#     TRIP_STATION_QUERY = 'SELECT trip.id AS trip_id, \
+#                                 trip.bike_id AS bike_id, \
+#                                 trip.subscription_type AS subscription_type, \
+#                                 trip.duration AS duration, \
+#                                 trip.start_date AS start_date, \
+#                                 trip.end_date AS end_date, \
+#                                 start_station.name AS start_station_name, \
+#                                 end_station.name AS end_station_name, \
+#                                 start_station.lat AS start_lat, \
+#                                 start_station.long AS start_long, \
+#                                 end_station.lat AS end_lat, \
+#                                 end_station.long AS end_long \
+#                             FROM trip \
+#                             JOIN station AS start_station \
+#                                 ON trip.start_station_id = start_station.id \
+#                             JOIN station AS end_station \
+#                                 ON trip.end_station_id = end_station.id;'
 
-    sf_df = run_pd_query(TRIP_STATION_QUERY)
-    return sf_df
+#     sf_df = run_pd_query(TRIP_STATION_QUERY)
+#     return sf_df
 
-sf_df = select_trips()
+# sf_df = select_trips()
 
-# preprocess the data
-@st.cache
-def preprocess(sf_df, weather_df):
-    # remove any rows that have empty columns
-    sf_df = sf_df.dropna(how="any")
-    weather_df = weather_df.dropna(how="any")
+# # preprocess the data
+# @st.cache
+# def preprocess(sf_df, weather_df):
+#     # remove any rows that have empty columns
+#     sf_df = sf_df.dropna(how="any")
+#     weather_df = weather_df.dropna(how="any")
 
-    # remove the outliers based on duration
-    z_scores = stats.zscore(sf_df["duration"])
+#     # remove the outliers based on duration
+#     z_scores = stats.zscore(sf_df["duration"])
 
-    abs_z_scores = np.abs(z_scores)
-    filtered_entries = (abs_z_scores < 3)
-    sf_df = sf_df[filtered_entries]
+#     abs_z_scores = np.abs(z_scores)
+#     filtered_entries = (abs_z_scores < 3)
+#     sf_df = sf_df[filtered_entries]
 
-    # convert the start and end dates to pandas datetime
-    sf_df["start_datetime"] = pd.to_datetime(sf_df["start_date"], format='%m/%d/%Y %H:%M', errors="coerce")
-    sf_df["end_datetime"] = pd.to_datetime(sf_df["end_date"], format='%m/%d/%Y %H:%M', errors="coerce")
+#     # convert the start and end dates to pandas datetime
+#     sf_df["start_datetime"] = pd.to_datetime(sf_df["start_date"], format='%m/%d/%Y %H:%M', errors="coerce")
+#     sf_df["end_datetime"] = pd.to_datetime(sf_df["end_date"], format='%m/%d/%Y %H:%M', errors="coerce")
     
-    sf_df["start_date"] = sf_df["start_datetime"].dt.date
-    sf_df["end_date"] = sf_df["end_datetime"].dt.date
+#     sf_df["start_date"] = sf_df["start_datetime"].dt.date
+#     sf_df["end_date"] = sf_df["end_datetime"].dt.date
 
-    weather_df["date"] = pd.to_datetime(weather_df["date"], format='%m/%d/%Y')
+#     weather_df["date"] = pd.to_datetime(weather_df["date"], format='%m/%d/%Y')
 
-    # add month column
-    sf_df["start_month"] = sf_df["start_datetime"].dt.month_name()
-    sf_df["end_month"] = sf_df["end_datetime"].dt.month_name()
-    weather_df["month"] = weather_df["date"].dt.month_name()
+#     # add month column
+#     sf_df["start_month"] = sf_df["start_datetime"].dt.month_name()
+#     sf_df["end_month"] = sf_df["end_datetime"].dt.month_name()
+#     weather_df["month"] = weather_df["date"].dt.month_name()
 
-    # add year column
-    sf_df["start_year"] = sf_df["start_datetime"].dt.year
-    sf_df["end_year"] = sf_df["end_datetime"].dt.year
+#     # add year column
+#     sf_df["start_year"] = sf_df["start_datetime"].dt.year
+#     sf_df["end_year"] = sf_df["end_datetime"].dt.year
 
-    # add day column
-    sf_df["start_day"] = sf_df["start_datetime"].dt.day_name()
-    sf_df["end_day"] = sf_df["end_datetime"].dt.day_name()
+#     # add day column
+#     sf_df["start_day"] = sf_df["start_datetime"].dt.day_name()
+#     sf_df["end_day"] = sf_df["end_datetime"].dt.day_name()
 
-    # add hour column
-    sf_df["start_hour"] = sf_df["start_datetime"].dt.hour
-    sf_df["end_hour"] = sf_df["end_datetime"].dt.hour
+#     # add hour column
+#     sf_df["start_hour"] = sf_df["start_datetime"].dt.hour
+#     sf_df["end_hour"] = sf_df["end_datetime"].dt.hour
 
-    # make duration into minutes
-    sf_df["duration_min"] = sf_df["duration"] / 60
+#     # make duration into minutes
+#     sf_df["duration_min"] = sf_df["duration"] / 60
+
+#     return sf_df, weather_df
+
+# sf_df, weather_df = preprocess(sf_df, weather_df)
+
+@st.cache
+def load_csv():
+    jan = pd.read_csv("./data/sf/trips/jan.csv")
+    feb = pd.read_csv("./data/sf/trips/feb.csv")
+    mar = pd.read_csv("./data/sf/trips/mar.csv")
+    apr = pd.read_csv("./data/sf/trips/apr.csv")
+    may = pd.read_csv("./data/sf/trips/may.csv")
+    june = pd.read_csv("./data/sf/trips/june.csv")
+    july = pd.read_csv("./data/sf/trips/july.csv")
+    aug = pd.read_csv("./data/sf/trips/aug.csv")
+    sep = pd.read_csv("./data/sf/trips/sep.csv")
+    oct = pd.read_csv("./data/sf/trips/oct.csv")
+    nov = pd.read_csv("./data/sf/trips/nov.csv")
+    dec = pd.read_csv("./data/sf/trips/dec.csv")
+
+    sf_df = pd.concat([jan, feb, mar, apr, may, june, july, aug, sep, oct, nov, dec], ignore_index=True)
+
+
+    weather_df = pd.read_csv("./data/sf/weather.csv")
 
     return sf_df, weather_df
 
-sf_df, weather_df = preprocess(sf_df, weather_df)
+sf_df, weather_df = load_csv()
 
 # BEGIN APP
 
