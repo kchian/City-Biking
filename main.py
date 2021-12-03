@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-from pandas_profiling import ProfileReport
 import geopandas as gpd
 from datetime import datetime
 import altair as alt
