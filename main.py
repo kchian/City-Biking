@@ -264,10 +264,6 @@ def main():
 
     ''')
 
-    st.markdown('''
-    ADD INFORMATION ABOUT THE STORY WE ARE TRYING TO TELL AND WHAT WE ARE INVESTIGATING
-    ''')
-
     # st.dataframe(sf_df.head(10))
 
     st.header("Understanding demand at bike stations")
