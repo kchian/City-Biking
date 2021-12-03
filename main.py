@@ -171,7 +171,6 @@ usage_df, usage_agg = load_df(USAGE_PATH)
 stations = pd.read_csv("data/sf/station.csv")
 stations_map = {name: id for name, id in zip(stations["name"], stations["id"])}
 
-# Skeleton for this function was taken from streamlit demo (https://github.com/streamlit/demo-uber-nyc-pickups/blob/master/streamlit_app.py)
 # @st.cache 
 def display_usage():
     option = st.selectbox(
@@ -206,13 +205,6 @@ def display_usage():
                     layer="below", line_width=0,
                 )
             cur += datetime.timedelta(days=1)
-    # for d in weekend_rows["date"].iteritems():
-    #     d = d[1]
-    #     fig.add_vrect(
-    #         x0=d, x1=d+pd.Timedelta(days=1),
-    #         fillcolor="LightSalmon", opacity=0.5,
-    #         layer="below", line_width=0,
-    #     );
     if option == "All stations":
         fig.update_xaxes(
             dtick="M1",
@@ -226,22 +218,8 @@ def display_error_hist():
 
 
 def display_model_comparison():
-    # hard coded bar grpah from the ipynb file
-    
-    # data = {
-    #     "Lasso - MSE": 75.99630450481934,
-    #     "Lasso - MAE": 5.244548440456221,
-    #     "Decision Tree (max depth 10) - MSE": 42.90820231599476,
-    #     "Decision Tree (max depth 10) - MAE": 4.076241427075703,
-    #     "Decision Tree (max depth 20) - MSE": 56.83001558861096,
-    #     "Decision Tree (max depth 20) - MAE": 4.674037766715455,
-    #     "KNeighborsRegressor (neighbors 3) - MSE": 43.018884903647134,
-    #     "KNeighborsRegressor (neighbors 3) - MAE": 4.226156041497936,
-    #     "KNeighborsRegressor (neighbors 5) - MSE": 39.30108064329516,
-    #     "KNeighborsRegressor (neighbors 5) - MAE": 4.023302094180261,
-    #     "GradientBoostingRegressor - MSE": 29.460115545532794,
-    #     "GradientBoostingRegressor - MAE": 3.504163064866572,
-    # }
+    # hard coded bar graph from the ipynb file
+
     data = {
         "Lasso": [75.99630450481934,5.244548440456221],
         "Decision Tree (max depth 10)": [42.90820231599476,4.076241427075703],
@@ -268,9 +246,6 @@ def display_test_graph():
     data = data.melt(id_vars='date', value_vars=['predicted_usage', 'usage'])
     data = data.sort_values("date")
     fig = px.line(data, x='date', y='value', color='variable', title="Average Test Point vs Average Prediction per Day")
-    # fig = px.line(data, x="date", y="usage", color="is_weekend", title="Average Test Point vs Average prediction")
-    # fig.add_trace(px.scatter(data, x="date", y="predicted_usage", color="yellow").data[0])
-    # fig.update_layout(barmode='group')
     st.plotly_chart(fig, use_container_width=True)
     
 
@@ -342,10 +317,53 @@ def main():
         st.write(f"** {N_ROWS} least popular stations where trips are {trip_type}ing based on the above configuration **")
         display_station_value_counts(sf_df, trip_type, nunique_dates, False, N_ROWS)
 
+
+    st.header("Predicting Bike Station Demand")
+    st.markdown('''
+    We define usage, an indicator of demand, to be the number of rides originating at a particular station. Once we have a predicted usage, we can determine the times 
+    where our supply (bikes per station) fails to meet the demand (predicted bikes per station), forcing people to use other potentially less sustainable modes
+    of transportation. We can also use the model to show how demand might increase over time, what factors lead to increased demand, and how we might better
+    plan the city or allocate resoources for sustainable transport.
+    
+    To start, we graph the demand per station below: you can select a station to focus on. The default option of "All stations" gives the average usage across stations 
+    over one year. Note the dips in demand during weekends.
+    ''')
     display_usage()
+    st.markdown('''
+    For our final model, our results had a very small error on average. However, there are a number of outliers in the error, possibly due to specific events or holidays
+    which caused patterns to shift. Below is a histogram of errors per test data point.
+    ''')
     display_error_hist()
+    st.markdown('''
+    We tested many models in our attempts to minimize error. Below are the results. In terms of training methodology, we split our train and test datasets at random after 
+    aggregating the data to usage per station per day. You can think of this as masking out points on the above demand graph and asking the model to fill it in.
+    ''')
     display_model_comparison()
+    st.markdown('''
+    As a way of visualizing the error on our regression model, we plot the average ground truth for a day and the average predicted value for a day on the same graph. 
+    Though this means that a large error in one station is visually less significant in this graph, it also shows how the average across the noisy single-station data 
+    ends up with a good prediction overall.
+    ''')
     display_test_graph()
+    
+    st.header("Limitations and Considerations")
+    st.markdown('''
+    This data was collected across the SF bay area from mid-2013 to mid-2015. We first limit our analysis to the area of greatest bike concentration (and the namesake of the dataset), which is San Francisco proper. 
+
+    This is data collected from a pilot program in SF - and is one similar to modern programs found in other cities across the world, such as Helsinki. As a result, there are many benefits to studying it, for example:
+        - Patterns of adopting bikeshare programs for cities considering it
+        - Discovering the data needed to properly forecast usage
+
+    SF has since changed their bike share system, obtaining corporate sponsorship and rebranding the system to "Bay Wheels". The system currently includes an electric ("adaptive") bike system in tandem with a classic bike system, all hosted on Lyft's website. 
+
+    We believe analyzing bike data and carefully collecting other city-wide data is key to creating a more sustainable future.
+
+
+    Further Reading / Sources
+    - [The most recent bike share website](https://www.lyft.com/bikes/bay-wheels)
+    - [SF Municipal Transportation Agency Website](https://www.sfmta.com/getting-around/bike/bike-share)
+    ''')
+    
 
 
 if __name__ == "__main__":
