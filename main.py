@@ -91,7 +91,7 @@ def filters():
 
         mask_sf_df = sf_df.loc[mask]
 
-        lat_long_data = mask_sf_df[[lat_name, long_name]]
+        lat_long_data = mask_sf_df.copy()[[lat_name, long_name]]
         lat_long_data = lat_long_data.rename(columns={lat_name: "lat", long_name: "lon"})
 
         if lat_long_data.shape[0] > MAX_ALLOWED:
