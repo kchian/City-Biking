@@ -15,3 +15,9 @@ In 2013, the San Francisco Municipal Transportation Agency (SFMTA) partnered wit
 Stations were placed thorughout the bay, but mostly around other public transport options for convenience. In the periods after this dataset, various improvements were made to the program, including the addition of stationless bikes.
 
 The database and files are available on Kaggle at the following [link](https://www.kaggle.com/benhamner/sf-bay-area-bike-share).
+
+# Hosted Visualization
+https://share.streamlit.io/kchian/city-biking/main/main.py
+
+# Video
+https://www.youtube.com/watch?v=8OsuFisu3BU
